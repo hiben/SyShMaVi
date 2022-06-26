@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'de.zvxeb'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+application {
+    mainClass = 'de.zvxeb.syshmavi.Main'
+}
+
+dependencies {
+    implementation project(':JKeyboard')
+    implementation project(':JRes')
+    // https://mvnrepository.com/artifact/org.jogamp.gluegen/gluegen-rt-main
+    implementation group: 'org.jogamp.gluegen', name: 'gluegen-rt-main', version: '2.3.2'
+    // https://mvnrepository.com/artifact/org.jogamp.jogl/jogl-all-main
+    implementation group: 'org.jogamp.jogl', name: 'jogl-all-main', version: '2.3.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+test {
+    useJUnitPlatform()
+}

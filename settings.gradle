@@ -1,0 +1,6 @@
+rootProject.name = 'SyShMaVi-Project'
+include 'JXMI'
+include 'JKeyboard'
+include 'JRes'
+include 'SyShMaVi'
+
