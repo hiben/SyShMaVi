@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel.MapMode;
+import java.nio.file.Path;
 
 import de.zvxeb.jres.MapTile;
 import de.zvxeb.jres.ResBitmap;
@@ -242,13 +243,15 @@ public class Main {
 	
 	public static class MapListener implements MapExitListener
 	{
+		private Configuration configuration;
 		private ResManager mgr;
 		private byte [] palette;
 		private int currentMapNum;
 		private Environment currentEnvironment;
 		private TextureProperties textureProperties;
 		
-		public MapListener(ResManager mgr, byte [] palette, int currentMapNum) {
+		public MapListener(Configuration configuration, ResManager mgr, byte [] palette, int currentMapNum) {
+			this.configuration = configuration;
 			this.mgr = mgr;
 			this.palette = palette;
 			this.currentMapNum = currentMapNum;
@@ -291,7 +294,7 @@ public class Main {
 				currentMapNum = newmap;
 				SSMap map = SSMap.getMap(mgr, currentMapNum);
 				System.out.println(String.format("Loading Map %d: %s", newmap, SSLogic.getLevelName(newmap)));
-				Map3D m3d = Map3D.createMap3D(mgr, map, palette, textureProperties);
+				Map3D m3d = Map3D.createMap3D(configuration, mgr, map, palette, textureProperties);
 				m3d.addMapExitListener(this);
 				if(currentEnvironment!=null) {
 					Environment newEnv = m3d.getEnvironment();
@@ -314,13 +317,25 @@ public class Main {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		String basedir = ".";
-		
-		int mapnum = 1;
+		Configuration cfg = new Configuration();
+
+		Path configPath = Path.of(cfg.getValueFor(Configuration.CONFIG_PATH).get());
+		if(!configPath.toFile().isDirectory()) {
+			System.out.println("Trying to create: " + configPath);
+			if (!configPath.toFile().mkdir()) {
+				System.err.println("Could not create .syshmavi directory...");
+			}
+		}
+
+		cfg.loadConfiguration();
+
+		String basedir = cfg.getValueFor(Configuration.DATA_PATH).orElse(".");
 		
 		if(args.length>0)
 			basedir = args[0];
-		
+
+		int mapnum = cfg.getValueFor(Configuration.MAP).get();
+
 		if(args.length>1)
 		{
 			try
@@ -508,7 +523,7 @@ public class Main {
 		//showTextures(rm, palette, map);
 		//showMap(rm, palette, map);
 		//Map3D.createMap3D(rm, map, palette);
-		MapListener ml = new MapListener(rm, palette, mapnum);
+		MapListener ml = new MapListener(cfg, rm, palette, mapnum);
 		ml.onMapExit(MapExitListener.MapExitEvent.Goto, mapnum);
 	}
 

@@ -39,6 +39,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -162,7 +163,8 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	private double [] tmpCrateDarkness = new double [8];
 	private Map<Integer, double []> crateDarknessMap = new TreeMap<Integer, double[]>();
-	
+
+	private Configuration configuration;
 	
 	private static class CenteredTexture {
 		public Texture texture;
@@ -511,8 +513,10 @@ public class Map3D implements GLEventListener, WindowListener {
 		return env;
 	}
 	
-	public Map3D(ResManager rm, SSMap map, byte [] palette, TextureProperties textureProperties)
+	public Map3D(Configuration configuration, ResManager rm, SSMap map, byte [] palette, TextureProperties textureProperties)
 	{
+		this.configuration = configuration;
+
 		env = new Environment();
 		env.cam_pos[VecMath.IDX_X] = map.getHorzSize() * env.level_scale / 2;
 		env.cam_pos[VecMath.IDX_Y] = 0;
@@ -4615,10 +4619,13 @@ public class Map3D implements GLEventListener, WindowListener {
 		sortPolygons();
 		
 		//TODO cache
+
+		boolean loadVisInfo = configuration.getValueFor(Configuration.LOAD_VIS).get();
 		
-		
-		System.out.println("Trying to use cached visibility information...");
-		if(loadVisInfo())
+		if(loadVisInfo) {
+			System.out.println("Trying to use cached visibility information...");
+		}
+		if(loadVisInfo && loadVisInfo())
 		{
 			System.out.println("Using cached visibility information...");
 		}
@@ -4627,9 +4634,11 @@ public class Map3D implements GLEventListener, WindowListener {
 			System.out.println("Calculating static visibility information...");
 			calculate_vis_info();
 			System.out.println("...done!");
-			
-			System.out.println("Saving vis-info...");
-			saveVisInfo();
+
+			if(configuration.getValueFor(Configuration.SAVE_VIS).get()) {
+				System.out.println("Saving vis-info...");
+				saveVisInfo();
+			}
 		}
 		
 		if(useVertexArrays)
@@ -4750,9 +4759,9 @@ public class Map3D implements GLEventListener, WindowListener {
 		}
 	}
 
-	public static Map3D createMap3D(ResManager rm, SSMap map, byte [] palette, TextureProperties textureProperties)
+	public static Map3D createMap3D(Configuration configuration, ResManager rm, SSMap map, byte [] palette, TextureProperties textureProperties)
 	{
-		MapRunnable mr = new MapRunnable(new Map3D(rm, map, palette, textureProperties));
+		MapRunnable mr = new MapRunnable(new Map3D(configuration, rm, map, palette, textureProperties));
 		
 		SwingUtilities.invokeLater(mr);
 		
@@ -5378,8 +5387,9 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	private boolean loadVisInfo()
 	{
+		Path visBase = Path.of(configuration.getValueFor(Configuration.CONFIG_PATH).orElse("."));
 		byte [] maphash = map.getTileHash();
-		File f = new File("visinfo_l" + map.getNumber());
+		File f = visBase.resolve("visinfo_l" + map.getNumber()).toFile();
 		
 		byte [] cachehash = new byte [maphash.length];
 		int packed_size = getPackedSize(map.getHorzSize(), map.getVertSize());
@@ -5446,9 +5456,10 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	private boolean saveVisInfo()
 	{
+		Path visBase = Path.of(configuration.getValueFor(Configuration.CONFIG_PATH).orElse("."));
 		byte [] maphash = map.getTileHash();
-		File f = new File("visinfo_l" + map.getNumber());
-		
+		File f = visBase.resolve("visinfo_l" + map.getNumber()).toFile();
+
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(64000);
 		DataOutputStream dos = new DataOutputStream(baos);
 		
