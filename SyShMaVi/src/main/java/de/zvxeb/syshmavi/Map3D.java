@@ -228,6 +228,7 @@ public class Map3D implements GLEventListener, WindowListener {
 	private boolean show_vismap = false;
 	
 	private SSMap map;
+	private SSMap nextMap = null;
 	private ResManager rm;
 	private byte [] palette;
 	
@@ -326,7 +327,7 @@ public class Map3D implements GLEventListener, WindowListener {
 	private static final String cheatLighting = "light";
 	private static final String cheatOnlyPick = "pick";
 	private static final String cheatNotOnlyPick = "nopick";
-	
+
 	private static String [] directions = 
 	{
 		"N", "NE", "E", "SE", "S", "SW", "W", "NW"
@@ -531,33 +532,11 @@ public class Map3D implements GLEventListener, WindowListener {
 		env.cam_view[VecMath.IDX_Z] = -1.0;
 		
 		env.frame_time = -1;
-		
+
+		this.textureProperties = textureProperties;
 		this.map = map;
 		this.rm = rm;
 		this.palette = palette;
-		
-		this.mapToWorldSpace = env.level_scale / 256.0;
-		this.mapToTextureSpace = 1.0 / 256.0;
-		this.worldToTextureSpace = 1.0 / env.level_scale;
-		this.tileToWorldSpace = env.level_scale;
-		this.worldToTileSpace = 1.0 / env.level_scale;
-		this.texBase = map.getLevelHeight() * this.mapToWorldSpace;
-		
-		this.polygons = new TilePolys [map.getHorzSize()] [map.getVertSize()];
-		
-		this.upper_darkmap = new double [map.getHorzSize()+1] [map.getVertSize()+1];
-		this.lower_darkmap = new double [map.getHorzSize()+1] [map.getVertSize()+1];
-		
-		portal_map = new byte [ map.getHorzSize() * map.getVertSize() ];
-		visible_tiles = new boolean [map.getHorzSize() * map.getVertSize()];
-		blocking_tiles = new boolean [map.getHorzSize() * map.getVertSize()];
-		has_drawable = new boolean [map.getHorzSize() * map.getVertSize()];
-		
-		vis_info = new int [map.getHorzSize() * map.getVertSize()] [];
-		
-		mapObjects = map.getMOTEntries();
-		
-		this.textureProperties = textureProperties;
 	}
 	
 	private TextureProperty getTexturePropertyFor(int texid) {
@@ -1158,23 +1137,19 @@ public class Map3D implements GLEventListener, WindowListener {
 				
 				if(keyid == env.key_previous_map)
 				{
-					if(mapExit(MapExitEvent.Previous, 0))
-					{
-						cleanStageForNewMap();
-					}
-					else {
-						System.out.println("Cannot get down...");
+					int nextMap = Map3D.this.map.getNumber() - 1;
+					if(nextMap >= 0) {
+						SSMap m = SSMap.getMap(Map3D.this.rm, nextMap);
+						loadMap(m);
 					}
 				}
 				
 				if(keyid == env.key_next_map)
 				{
-					if(mapExit(MapExitEvent.Next, 0))
-					{
-						cleanStageForNewMap();
-					}
-					else {
-						System.out.println("Cannot get up...");
+					int nextMap = Map3D.this.map.getNumber() + 1;
+					if(nextMap < SSLogic.numberOfMaps) {
+						SSMap m = SSMap.getMap(Map3D.this.rm, nextMap);
+						loadMap(m);
 					}
 				}
 				
@@ -3520,6 +3495,12 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	@Override
 	public void display(GLAutoDrawable drawable) {
+		if(nextMap!=null) {
+			System.out.format("Loading new map...");
+			loadMapInternal(drawable, nextMap);
+			nextMap = null;
+		}
+
 		long curTime = System.currentTimeMillis();
 		
 		if(env.lastTime==-1)
@@ -4532,34 +4513,33 @@ public class Map3D implements GLEventListener, WindowListener {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		GL2 gl = drawable.getGL().getGL2();
-		
+
 		AWTMouseAdapter pickAdapter = new AWTMouseAdapter(pickListener, drawable);
 		pickAdapter.addTo(glcanvas);
-		
+
 		gl.glClearColor(0, 0, 0, 0);
 		gl.glEnable(GL.GL_DEPTH_TEST);
 		gl.glEnable(GL.GL_TEXTURE_2D);
 		gl.glShadeModel(GL2.GL_SMOOTH);
 		// for doors + decals
 		gl.glPolygonOffset(-1.0f, 0.0f);
-		
-		if(use_multitex_glow)
-		{
+
+		if (use_multitex_glow) {
 			gl.glActiveTexture(GL.GL_TEXTURE1);
 			gl.glEnable(GL.GL_TEXTURE_2D);
 			gl.glActiveTexture(GL.GL_TEXTURE0);
 		}
-		
+
 		gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT, GL.GL_NICEST);
-		
+
 		//gl.glEnable(GL.GL_ALPHA_TEST);
 		//gl.glAlphaFunc(GL.GL_GREATER, 0.1f);
 		gl.glDepthFunc(GL.GL_LEQUAL);
-		
+
 		glu = new GLU();
 
 		System.out.println("OpenGL Version: " + gl.glGetString(GL.GL_VERSION));
-		
+
 		if(gl.isExtensionAvailable("GL_ARB_multitexture"))
 		{
 			System.out.println("GL_ARB_multitexture is available");
@@ -4567,12 +4547,47 @@ public class Map3D implements GLEventListener, WindowListener {
 			gl.glGetIntegerv(GL2.GL_MAX_TEXTURE_UNITS, maxtexunits, 0);
 
 			System.out.println(String.format(" -> System has %d texture units...", maxtexunits[0]));
-		}
-		else
-		{
+		} else {
 			System.out.println("GL_ARB_multitexture is NOT available");
 		}
-		
+
+		tr = new TextRenderer(new Font("SansSerif", Font.BOLD, 14));
+		tr.setUseVertexArrays(useVertexArrays);
+
+		initMap(drawable);
+	}
+
+	private void initMap(GLAutoDrawable drawable) {
+		GL2 gl = drawable.getGL().getGL2();
+
+		old_tile_x = -1;
+		old_tile_y = -1;
+		old_cdir = -1;
+
+		env.lastTime = -1;
+		env.frame_time = -1;
+
+		mapToWorldSpace = env.level_scale / 256.0;
+		mapToTextureSpace = 1.0 / 256.0;
+		worldToTextureSpace = 1.0 / env.level_scale;
+		tileToWorldSpace = env.level_scale;
+		worldToTileSpace = 1.0 / env.level_scale;
+		texBase = map.getLevelHeight() * this.mapToWorldSpace;
+
+		polygons = new TilePolys [map.getHorzSize()] [map.getVertSize()];
+
+		upper_darkmap = new double [map.getHorzSize()+1] [map.getVertSize()+1];
+		lower_darkmap = new double [map.getHorzSize()+1] [map.getVertSize()+1];
+
+		portal_map = new byte [ map.getHorzSize() * map.getVertSize() ];
+		visible_tiles = new boolean [map.getHorzSize() * map.getVertSize()];
+		blocking_tiles = new boolean [map.getHorzSize() * map.getVertSize()];
+		has_drawable = new boolean [map.getHorzSize() * map.getVertSize()];
+
+		vis_info = new int [map.getHorzSize() * map.getVertSize()] [];
+
+		mapObjects = map.getMOTEntries();
+
 		fetchTextures(gl);
 		
 		buildDarkMaps();
@@ -4618,8 +4633,6 @@ public class Map3D implements GLEventListener, WindowListener {
 
 		sortPolygons();
 		
-		//TODO cache
-
 		boolean loadVisInfo = configuration.getValueFor(Configuration.LOAD_VIS).get();
 		
 		if(loadVisInfo) {
@@ -4669,10 +4682,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		
 		ib_index_quad = Buffers.newDirectIntBuffer(map.isCyberspace() ? quads_total * 8 : max_quads_per_tex * 4);
 		ib_index_tri = Buffers.newDirectIntBuffer(map.isCyberspace() ? tris_total * 6 :max_tris_per_tex * 3);
-		
-		tr = new TextRenderer(new Font("SansSerif", Font.BOLD, 14));
-		tr.setUseVertexArrays(useVertexArrays);
-		
+
 		object_string_offsets = new float [SSObject.ObjectClass.values().length];
 		int oci = 0;
 		for(SSObject.ObjectClass oc : SSObject.ObjectClass.values())
@@ -4683,6 +4693,93 @@ public class Map3D implements GLEventListener, WindowListener {
 
 		vismapimg = new BufferedImage(map.getHorzSize(), map.getVertSize(), BufferedImage.TYPE_INT_ARGB);
 		vismaptex = AWTTextureIO.newTexture(gl.getGLProfile(), vismapimg, false);
+	}
+
+	private void destroyMap(GLAutoDrawable drawable) {
+		GL2 gl = drawable.getGL().getGL2();
+
+		// deallocate map texture
+		vismaptex.destroy(gl);
+
+		for(Texture t : decalTextures.values()) {
+			t.destroy(gl);
+		}
+		decalTextures.clear();
+
+		for(Texture t : modelGlowTextures.values()) {
+			t.destroy(gl);
+		}
+		modelGlowTextures.clear();
+
+		for(Texture t : modelTextures.values()) {
+			t.destroy(gl);
+		}
+		modelTextures.clear();
+
+		// clear models
+		models.clear();
+
+		for(Texture[] tl : doorTextureMap.values()) {
+			if(tl == null) continue;
+
+			for(Texture t : tl) {
+				t.destroy(gl);
+			}
+		}
+		doorTextureMap.clear();
+
+		for(CenteredTexture ct : objectSprites) {
+			if(ct == null) continue;
+
+			if(ct.texture != null) {
+				ct.texture.destroy(gl);
+			}
+		}
+		objectSprites = null;
+
+		for(CenteredTexture ct : critterTextures.values()) {
+			if(ct.texture != null) {
+				ct.texture.destroy(gl);
+			}
+		}
+		critterTextures.clear();
+
+		// some anim textures could be references
+		// to other textures
+		// destroy will ignore double invocation
+		for(Texture t : animGlowTextures.values()) {
+			t.destroy(gl);
+		}
+		animGlowTextures.clear();
+
+		for(Texture t : animTextures.values()) {
+			t.destroy(gl);
+		}
+		animTextures.clear();
+
+		for(Texture t : glow_tex) {
+			if(t == null) continue;
+			t.destroy(gl);
+		}
+		glow_tex = null;
+
+		for(Texture t : textures) {
+			if(t == null) continue;
+			t.destroy(gl);
+		}
+		textures = null;
+	}
+
+	private void loadMapInternal(GLAutoDrawable drawable, SSMap map) {
+		if(map==null) return;
+		if(map == this.map) return;
+		destroyMap(drawable);
+		this.map = map;
+		initMap(drawable);
+	}
+
+	public void loadMap(SSMap map) {
+		this.nextMap = map;
 	}
 	
 	private int getPackedSize(int width, int height)
@@ -5543,7 +5640,8 @@ public class Map3D implements GLEventListener, WindowListener {
 	public void dispose(GLAutoDrawable drawable) {
 		System.out.println("Disposing...");
 		JOGLKeyboard.removeKeyReleaseListener(cheatCodes);
-		JOGLKeyboard.removeKeyReleaseListener(toggles);;
+		JOGLKeyboard.removeKeyReleaseListener(toggles);
 		JOGLKeyboard.dispose();
+		destroyMap(drawable);
 	}
 }
