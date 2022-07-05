@@ -15,6 +15,8 @@
 */
 package de.zvxeb.syshmavi;
 
+import de.zvxeb.jres.SSLogic;
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -34,7 +36,7 @@ public class Configuration {
     public static final String CONFIG_PATH_ENVIRONMENT = "CONFIG_PATH";
 
     public static final String MAP_PROPERTY = "map";
-    public static final int MAP_DEFAULT = 1;
+    public static final int MAP_DEFAULT = -1;
 
     public static final String SAVE_VIS_PROPERTY = "saveVisInfo";
     public static final boolean SAVE_VIS_DEFAULT = false;
@@ -96,7 +98,8 @@ public class Configuration {
                 exceptionIsFalse(
                     s -> {
                         int map = Integer.parseInt(s);
-                        if(map < 0 || map > 15) {
+                        if(map == -1) return true;
+                        if(map < 0 || map >= SSLogic.levelNames.length) {
                             return false;
                         }
                         return true;
@@ -197,6 +200,21 @@ public class Configuration {
         public abstract A getValue(String value);
 
         public abstract A getDefaultValue();
+
+        public static Entry<Boolean> booleanEntry(String property, String environment, boolean defaultValue) {
+            return new Builder<Boolean>()
+                    .propertyName(property)
+                    .environmentVariable(environment)
+                    .validityCheck(IS_BOOLEAN)
+                    .valueMapper(Boolean::parseBoolean)
+                    .defaultValue(() -> defaultValue)
+                    .build()
+                    ;
+        }
+
+        public static Entry<Boolean> booleanEntry(String property, boolean defaultValue) {
+            return booleanEntry(property, null, defaultValue);
+        }
 
         public static Entry<String> stringEntry(String property, String environment) {
             return new Builder<String>()

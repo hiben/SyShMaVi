@@ -1180,7 +1180,7 @@ public class Map3D implements GLEventListener, WindowListener {
 				
 				if(keyid == KeyEvent.VK_ESCAPE)
 				{
-					if(mapExit(MapExitEvent.Exit, 0))
+					if(mapExit(MapExitEvent.Exit, -1))
 					{
 						cleanStageForNewMap();
 					}

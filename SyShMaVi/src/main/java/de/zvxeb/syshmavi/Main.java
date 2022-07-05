@@ -27,6 +27,7 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 import de.zvxeb.jres.MapTile;
 import de.zvxeb.jres.ResBitmap;
@@ -38,6 +39,8 @@ import de.zvxeb.jres.SSTexture;
 import de.zvxeb.jres.TextureProperties;
 import de.zvxeb.jres.SSTexture.TextureID;
 import de.zvxeb.jres.SSTexture.TextureSize;
+
+import javax.swing.*;
 
 public class Main {
 
@@ -278,7 +281,12 @@ public class Main {
 			int newmap = -1;
 			switch(mee) {
 			case Exit:
-				return true;
+				if(param < 0) return true;
+				newmap = selectMap(currentMapNum);
+				if (newmap < 0) {
+					return true;
+				}
+				break;
 			case Next:
 				newmap = currentMapNum+1;
 				break;
@@ -312,7 +320,35 @@ public class Main {
 			}
 		}
 	}
-	
+
+	public static boolean hasText(String s) {
+		return s != null && !s.isBlank();
+	}
+
+	public static int selectMap(int currentMap) {
+		if(currentMap < 0 || currentMap >= SSLogic.levelNames.length) currentMap = 1;
+		Object result =
+			JOptionPane.showInputDialog(
+				null,
+				"Select map to render...",
+				"Map Selection",
+				JOptionPane.PLAIN_MESSAGE,
+				null,
+				SSLogic.levelNames,
+				SSLogic.levelNames[currentMap]
+			);
+		if(result == null) {
+			printf("No map selected...");
+			return -1;
+		}
+		int index = Arrays.asList(SSLogic.levelNames).indexOf(result);
+		if(index < 0) {
+			printf("Invalid map...");
+			return -1;
+		}
+		return index;
+	}
+
 	/**
 	 * @param args
 	 */
@@ -329,32 +365,46 @@ public class Main {
 
 		cfg.loadConfiguration();
 
-		String basedir = cfg.getValueFor(Configuration.DATA_PATH).orElse(".");
+		String basedir = cfg.getValueFor(Configuration.DATA_PATH).orElse(null);
 		
 		if(args.length>0)
 			basedir = args[0];
+
+		if(!hasText(basedir) && cfg.getValueFor(Configuration.Entry.booleanEntry("showDataDirChooser", true)).get()) {
+			JFileChooser baseDirChooser = new JFileChooser();
+			baseDirChooser.setDialogTitle("Select System Shock Base Directory...");
+			baseDirChooser.setMultiSelectionEnabled(false);
+			baseDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			if(baseDirChooser.showDialog(null, "Select") == JFileChooser.APPROVE_OPTION) {
+				basedir = baseDirChooser.getSelectedFile().getPath();
+			}
+		}
+
+		if(basedir == null) {
+			printf("No base directory set!");
+			System.exit(0);
+		}
 
 		int mapnum = cfg.getValueFor(Configuration.MAP).get();
 
 		if(args.length>1)
 		{
-			try
-			{
-				mapnum = Integer.parseInt(args[1]);
-				
-				if(mapnum<0 || mapnum >= SSLogic.levelNames.length)
-				{
-					printerrf("Invalid Map number: %d. Valid range is 0-%d", mapnum, SSLogic.levelNames.length-1);
-				}
-					
-			}
-			catch(NumberFormatException nfe)
-			{
-				printerrf("Not a number: %s", args[1]);
+			if(Configuration.MAP.isValid(args[1])) {
+				mapnum = Configuration.MAP.getValue(args[1]);
+			} else {
+				printerrf("Invalid Map number: %s; Valid range is 0-%d", args[1], SSLogic.levelNames.length-1);
 				System.exit(1);
 			}
 		}
-		
+
+		if(mapnum == -1) {
+			mapnum = selectMap(-1);
+			if(mapnum < 0) {
+				printf("No map selected...");
+				System.exit(0);
+			}
+		}
+
 		File f = new File(basedir);
 		
 		if(!f.isDirectory()){
