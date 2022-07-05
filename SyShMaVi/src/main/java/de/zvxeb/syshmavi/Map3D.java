@@ -112,7 +112,7 @@ public class Map3D implements GLEventListener, WindowListener {
 	private static final boolean use_vis_blocker = true;
 	private static final boolean use_static_visibility = true;
 	// set to true to have lower and upper darkmaps
-	// saved as PGM images to _my_ home :-)
+	// saved as PGM images to current directory
 	private static final boolean darkness_debug = false;
 	
 	private static final float text_scale_3d = 0.005f;
@@ -5015,7 +5015,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		if(darkness_debug)
 		{
 			try {
-				FileWriter upper_image = new FileWriter("/home/hendrik/my_upper.pgm");
+				FileWriter upper_image = new FileWriter("my_upper.pgm");
 				upper_image.write("P2\n65 65\n255\n");
 				StringBuilder sb = new StringBuilder();
 				for(int y=0; y<=map.getVertSize(); y++)
@@ -5031,7 +5031,7 @@ public class Map3D implements GLEventListener, WindowListener {
 				}
 				upper_image.close();
 
-				FileWriter lower_image = new FileWriter("/home/hendrik/my_lower.pgm");
+				FileWriter lower_image = new FileWriter("my_lower.pgm");
 				lower_image.write("P2\n65 65\n255\n");
 				for(int y=0; y<=map.getVertSize(); y++)
 				{
