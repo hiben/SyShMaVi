@@ -18,6 +18,32 @@ Changes for release:
 - Some tweaks with initial visual settings
 - Added a license
 
+## Changelog
+Keeping track of changes after releasing on github.
+
+- **05.07.2022**
+
+  - Command line parameters not required anymore. UI popup for setup if needed.
+ 
+  - Level change now keeps old window.
+
+  - Added configuration options via files and properties.
+  
+    **$HOME/.syshmavi/config.properties** 
+    
+    Can be used for properties, or override via command line (*-D*):
+
+    - **dataPath**: path to System Shock data directory (e.g. the CD), if not set, will be asked on running
+  
+      (or via **SS1_DATA_PATH** environment variable)
+
+    - **map**: map to load (0-15), if not set selection box will show
+
+    - **configPath**: alternative path to config file
+    
+      (or via **CONFIG_PATH** environment variable)
+    - **saveVisInfo**/**loadVisInfo**: save and load computed visibility (not saving by default, little impact on modern machines, saves to config path)
+
 ## License
 
 I'm putting this under the Apache 2.0 license. See LICENSE file.
