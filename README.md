@@ -21,6 +21,12 @@ Changes for release:
 ## Changelog
 Keeping track of changes after releasing on github.
 
+- **07.09.2022**
+
+  - Initial mouse-look
+  
+    on by default, while window is focused. Toggle with TAB (no mouse-grab while showing map)
+
 - **05.07.2022**
 
   - Command line parameters not required anymore. UI popup for setup if needed.

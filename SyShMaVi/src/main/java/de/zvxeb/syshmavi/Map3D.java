@@ -15,11 +15,7 @@
 */
 package de.zvxeb.syshmavi;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -133,6 +129,9 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	private JFrame frame;
 	private GLCanvas glcanvas;
+
+	private Cursor noCursor;
+	private Robot robot;
 	
 	short [] texids;
 	private Texture [] textures;
@@ -1133,6 +1132,12 @@ public class Map3D implements GLEventListener, WindowListener {
 				{
 					show_vismap = !show_vismap;
 					System.out.println("VisMap: " + (show_vismap?"on":"off"));
+					// TODO - better mouse indicator
+					if(show_vismap) {
+						glcanvas.setCursor(Cursor.getDefaultCursor());
+					} else {
+						glcanvas.setCursor(noCursor);
+					}
 				}
 				
 				if(keyid == env.key_previous_map)
@@ -1191,7 +1196,18 @@ public class Map3D implements GLEventListener, WindowListener {
 		frame.setVisible(true);
 		
 		frame.addWindowListener(this);
-		
+
+		BufferedImage emptyImage = new BufferedImage(1,1, BufferedImage.TYPE_INT_ARGB);
+		noCursor = Toolkit.getDefaultToolkit().createCustomCursor(emptyImage, new Point(0,0), "null");
+
+		glcanvas.setCursor(noCursor);
+
+		try {
+			robot = new Robot();
+		} catch (AWTException e) {
+			System.err.println("Cannot create robot...");
+		}
+
 		glcanvas.requestFocus();
 	}
 	
@@ -1227,10 +1243,49 @@ public class Map3D implements GLEventListener, WindowListener {
 		if( (turn_case & BLOCK_LR) == BLOCK_LR )
 			turn_case &= ~BLOCK_LR;
 
+		Point mousePos = glcanvas.getMousePosition();
+		Point systemMousePos = MouseInfo.getPointerInfo().getLocation();
+
 		boolean running = JOGLKeyboard.isPressed(env.key_runmod);
 		double mov_scale = (double)delta / 1000.0;
 		double mov_mult = mov_scale * (running?env.run_mod:1.0);
-		
+
+		if(!show_vismap && (robot != null && frame.isFocused())) {
+			if (mousePos != null) {
+				int w = glcanvas.getWidth();
+				int h = glcanvas.getHeight();
+
+				int cx = w / 2;
+				int cy = h / 2;
+				double mouse_horz = 0.0;
+				double mouse_vert = 0.0;
+
+				int delta_x = mousePos.x - cx;
+				int delta_y = mousePos.y - cy;
+
+				if ( (Math.abs(mousePos.x - cx) > 0) || (Math.abs(mousePos.y - cy)) > 0) {
+					mouse_horz = (((double) mousePos.x / w) - 0.5) * 2.0;
+					mouse_vert = (((double) mousePos.y / h) - 0.5) * 2.0;
+
+					env.cam_rot[VecMath.IDX_Y] += mouse_horz * env.turn_speed_mouse * mov_scale;
+
+					env.cam_rot[VecMath.IDX_X] += mouse_vert * env.turn_speed_mouse * mov_scale;
+
+					while (env.cam_rot[VecMath.IDX_Y] < 0)
+						env.cam_rot[VecMath.IDX_Y] += 360.0;
+					while (env.cam_rot[VecMath.IDX_Y] >= 360.0)
+						env.cam_rot[VecMath.IDX_Y] -= 360.0;
+
+					if (env.cam_rot[VecMath.IDX_X] < -180.0)
+						env.cam_rot[VecMath.IDX_X] = -180.0;
+					if (env.cam_rot[VecMath.IDX_X] > 180.0)
+						env.cam_rot[VecMath.IDX_X] = 180.0;
+
+					robot.mouseMove(systemMousePos.x - delta_x, systemMousePos.y - delta_y);
+				}
+			}
+		}
+
 		if(turn_case!=0)
 		{
 			double turn_add = mov_mult * env.turn_speed;
@@ -1346,7 +1401,7 @@ public class Map3D implements GLEventListener, WindowListener {
 			env.fov_h += 10.0 * mov_scale;
 			env.fov_update = true;
 		}
-		
+
 		env.fov_h = Math.max(30.0, Math.min(180.0, env.fov_h));
 		
 		env.cam_view[VecMath.IDX_X] = Math.sin(env.cam_rot[VecMath.IDX_Y] / 180.0 * Math.PI);
@@ -4831,7 +4886,10 @@ public class Map3D implements GLEventListener, WindowListener {
 		double aspect = (double)width / (double)height;
 		env.aspect = aspect;
 		GL2 gl = drawable.getGL().getGL2();
-		
+
+		Rectangle2D bounds = glcanvas.getBounds();
+		System.out.format("Reshape Frame %f,%f,%fx%f GL %dx%d\n", bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(), width, height);
+
 		gl.glMatrixMode(GL2.GL_PROJECTION);
 		gl.glLoadIdentity();
 		glu.gluPerspective(env.fov_h, aspect, 0.1, 100.0);

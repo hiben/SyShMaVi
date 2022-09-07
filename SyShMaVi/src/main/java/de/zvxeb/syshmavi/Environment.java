@@ -50,6 +50,7 @@ public class Environment {
 	
 	public double speed = 1.5;
 	public double turn_speed = 60.0;
+	public double turn_speed_mouse = 7200.0;
 	public double run_mod = 3.0;
 	
 	public double level_scale = 2.0;
