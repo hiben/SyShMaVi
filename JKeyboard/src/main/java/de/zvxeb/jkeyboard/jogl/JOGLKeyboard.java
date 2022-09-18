@@ -31,9 +31,6 @@ import de.zvxeb.jkeyboard.KeyListener;
 import de.zvxeb.jkeyboard.KeyPressListener;
 import de.zvxeb.jkeyboard.KeyReleaseListener;
 
-import com.jogamp.newt.Window;
-import com.jogamp.newt.event.awt.AWTKeyAdapter;
-
 /**
  * A simple pollable keyboard-state representation for use
  * with JOGL drawables
@@ -57,8 +54,7 @@ public class JOGLKeyboard {
 	
 	static private Object syncDummy = new Object();
 	
-	static private AWTKeyAdapter keyAdapter = null;
-	static private GLDrawable drawable; 
+	static private GLDrawable drawable;
 	
 	/**
 	 * This method is called to attach to the AWTEvent-system.<br>
@@ -95,11 +91,9 @@ public class JOGLKeyboard {
 				
 				if(drawable instanceof Component) {
 					Component c = (Component)drawable;
-					keyAdapter = new AWTKeyAdapter(kbel, drawable);
-					keyAdapter.addTo(c);
-				} else if(drawable instanceof Window) {
-					Window w = (Window)drawable;
-					w.addKeyListener(kbel);
+					c.addKeyListener(kbel);
+				} else {
+					System.err.println("Not attaching to window...");
 				}
 				
 				isRegistered = true;
@@ -112,11 +106,7 @@ public class JOGLKeyboard {
 			if(isRegistered) {
 				if(drawable instanceof Component) {
 					Component c = (Component)drawable;
-					keyAdapter.removeFrom(c);
-				} else if(drawable instanceof Window) {
-					Window w = (Window)drawable;
-					w.addKeyListener(kbel);
-					w.removeKeyListener(kbel);
+					c.removeKeyListener(kbel);
 				}
 				isRegistered = false;
 			}
@@ -175,15 +165,9 @@ public class JOGLKeyboard {
 	 */
 	public static void shutdown()
 	{
-		if(drawable!=null) {
-			if(drawable instanceof Component) {
-				Component c = (Component)drawable;
-				c.removeKeyListener(keyAdapter);
-				keyAdapter = null;
-			} else if(drawable instanceof Window) {
-				Window w = (Window)drawable;
-				w.removeKeyListener(kbel);
-			}
+		if(drawable instanceof Component) {
+			Component c = (Component)drawable;
+			c.removeKeyListener(kbel);
 		}
 	}
 	
@@ -198,28 +182,34 @@ public class JOGLKeyboard {
 		return keystate[keycode];
 	}
 	
-	private static class KBEventListener implements com.jogamp.newt.event.KeyListener
+	private static class KBEventListener implements java.awt.event.KeyListener
 	{
 
 		@Override
-		public void keyPressed(com.jogamp.newt.event.KeyEvent event) {
-			int keycode = event.getKeyCode();
-				keystate[keycode] = true;
-					tmpPressListeners.addAll(pressListeners);
-					for(KeyPressListener kpl : tmpPressListeners)
-						kpl.keyPressed(keycode);
-					tmpPressListeners.clear();
+		public void keyTyped(KeyEvent e) {
+
 		}
 
 		@Override
-		public void keyReleased(com.jogamp.newt.event.KeyEvent event) {
+		public void keyPressed(KeyEvent event) {
+			int keycode = event.getKeyCode();
+
+			keystate[keycode] = true;
+			tmpPressListeners.addAll(pressListeners);
+			for(KeyPressListener kpl : tmpPressListeners)
+				kpl.keyPressed(keycode);
+			tmpPressListeners.clear();
+		}
+
+		@Override
+		public void keyReleased(KeyEvent event) {
 			int keycode = event.getKeyCode();
 
 			keystate[keycode] = false;
-				tmpReleaseListeners.addAll(releaseListeners);
-				for(KeyReleaseListener krl : tmpReleaseListeners)
-					krl.keyReleased(keycode);
-				tmpReleaseListeners.clear();
+			tmpReleaseListeners.addAll(releaseListeners);
+			for(KeyReleaseListener krl : tmpReleaseListeners)
+				krl.keyReleased(keycode);
+			tmpReleaseListeners.clear();
 		}
 	}
 }

@@ -99,22 +99,22 @@ public class ModelView extends JFrame implements GLEventListener, KeyPressListen
 	long lastTime = -1L;
 	
 	//private int key_forward = KeyEvent.VK_W;
-	private int key_forward = com.jogamp.newt.event.KeyEvent.VK_W;
-	private int key_backward = com.jogamp.newt.event.KeyEvent.VK_S;
-	private int key_left = com.jogamp.newt.event.KeyEvent.VK_A;
-	private int key_right = com.jogamp.newt.event.KeyEvent.VK_D;
+	private int key_forward = KeyEvent.VK_W;
+	private int key_backward = KeyEvent.VK_S;
+	private int key_left = KeyEvent.VK_A;
+	private int key_right = KeyEvent.VK_D;
 	
-	private int key_down = com.jogamp.newt.event.KeyEvent.VK_F;
-	private int key_up = com.jogamp.newt.event.KeyEvent.VK_R;
+	private int key_down = KeyEvent.VK_F;
+	private int key_up = KeyEvent.VK_R;
 
 	//private int key_turn_left = KeyEvent.VK_LEFT;
-	private int key_turn_left = com.jogamp.newt.event.KeyEvent.VK_LEFT;
-	private int key_turn_right = com.jogamp.newt.event.KeyEvent.VK_RIGHT;
+	private int key_turn_left = KeyEvent.VK_LEFT;
+	private int key_turn_right = KeyEvent.VK_RIGHT;
 
-	private int key_yaw_up = com.jogamp.newt.event.KeyEvent.VK_DOWN;
-	private int key_yaw_down = com.jogamp.newt.event.KeyEvent.VK_UP;
+	private int key_yaw_up = KeyEvent.VK_DOWN;
+	private int key_yaw_down = KeyEvent.VK_UP;
 
-	private int key_runmod = com.jogamp.newt.event.KeyEvent.VK_SHIFT;
+	private int key_runmod = KeyEvent.VK_SHIFT;
 	
 	private double speed = 1.5;
 	private double turn_speed = 60.0;

@@ -15,7 +15,7 @@
 */
 package de.zvxeb.syshmavi;
 
-import com.jogamp.newt.event.KeyEvent;
+import java.awt.event.KeyEvent;
 
 public class Environment {
 	public long lastTime;
