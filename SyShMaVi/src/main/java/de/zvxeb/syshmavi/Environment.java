@@ -47,7 +47,9 @@ public class Environment {
 	public int key_previous_map = KeyEvent.VK_SUBTRACT;
 	
 	public int key_show_map = KeyEvent.VK_TAB;
-	
+
+	public int key_console = KeyEvent.VK_DEAD_CIRCUMFLEX;
+
 	public double speed = 1.5;
 	public double turn_speed = 60.0;
 	public double turn_speed_mouse = 7200.0;

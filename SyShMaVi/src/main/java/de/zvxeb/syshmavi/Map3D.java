@@ -36,19 +36,9 @@ import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.Vector;
+import java.util.function.Consumer;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
@@ -58,6 +48,8 @@ import com.jogamp.opengl.GL2;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.fixedfunc.GLLightingFunc;
+import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
 import com.jogamp.opengl.glu.GLU;
 import de.zvxeb.jkeyboard.KeyReleaseListener;
 import de.zvxeb.jkeyboard.jogl.JOGLKeyboard;
@@ -334,7 +326,11 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	private Cheats cheatCodes;
 	private KeyReleaseListener toggles;
-	
+	private Console console;
+
+	private int surfaceWidth = 0;
+	private int surfaceHeight = 0;
+
 	private static double [] [] tile_verts =
 	  {
 		  // Horz, Height, Vert
@@ -451,7 +447,9 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	private static Map<MapTile.Type, double []> vertMap;
 	private static Map<MapTile.Type, int []> texcoordMap;
-	
+
+	private boolean console_open = false;
+
 	static
 	{
 		vertMap = new TreeMap<MapTile.Type, double []>();
@@ -1106,7 +1104,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		glcanvas.removeGLEventListener(Map3D.this);
 		JOGLKeyboard.dispose();
 		JOGLKeyboard.removeKeyReleaseListener(toggles);
-		JOGLKeyboard.removeKeyReleaseListener(cheatCodes);
+		JOGLKeyboard.removeKeyReleaseListener(console);
 		frame.dispose();
 	}
 	
@@ -1127,7 +1125,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		toggles = new KeyReleaseListener()
 		{
 			@Override
-			public void keyReleased(int keyid) {
+			public void keyReleased(int keyid, char keychar) {
 				if(keyid == env.key_show_map)
 				{
 					show_vismap = !show_vismap;
@@ -1168,10 +1166,25 @@ public class Map3D implements GLEventListener, WindowListener {
 						System.out.println("Listener does not allow exit...");
 					}
 				}
+
+				if(keyid == env.key_console) {
+					console_open = !console_open;
+					if(console != null) {
+						console.setActive(console_open);
+					}
+					// TODO - better mouse indicator
+					if(console_open) {
+						glcanvas.setCursor(Cursor.getDefaultCursor());
+					} else {
+						glcanvas.setCursor(noCursor);
+					}
+				}
 			}
 		};
-		
-		
+
+		console = new Console();
+		console.setCommandConsumer(commandConsumer);
+
 		env.lastTime = -1L;
 		
 		env.rotationZ = 0.0;
@@ -1185,9 +1198,9 @@ public class Map3D implements GLEventListener, WindowListener {
 		
 		JOGLKeyboard.initialize(glcanvas);
 
-		JOGLKeyboard.addKeyReleaseListener(cheatCodes);
 		JOGLKeyboard.addKeyReleaseListener(toggles);
-		
+		JOGLKeyboard.addKeyReleaseListener(console);
+
 		frame.add(glcanvas, BorderLayout.CENTER);
 		
 		glcanvas.addGLEventListener(this);
@@ -1210,6 +1223,34 @@ public class Map3D implements GLEventListener, WindowListener {
 
 		glcanvas.requestFocus();
 	}
+
+	private String [] cheatToggles = {
+			cheatFly, cheatHide, cheatLighting, cheatNormals, cheatOnlyPick
+	};
+
+	private Consumer<String> commandConsumer = new Consumer<String>() {
+		@Override
+		public void accept(String s) {
+			if(s==null) return;
+			s = s.trim();
+			if(s.length()==0) return;
+
+			boolean noPrefix = false;
+			if(s.startsWith("no")) {
+				noPrefix = true;
+				s = s.substring(2);
+			}
+
+			for(int i=0; i<cheatToggles.length; i++) {
+				if(cheatToggles[i].equals(s)) {
+					cheatCodes.setCheat(s, !noPrefix);
+					cheatCodes.setCheat("no"+s, noPrefix);
+					console.addToLog(String.format("%s: %s", s, noPrefix ? "off" : "on"));
+					break;
+				}
+			}
+		}
+	};
 	
 	private final int M_F = 1;
 	private final int M_B = 2;
@@ -1221,6 +1262,8 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	public void handle_movement(long delta)
 	{
+		if(console != null && console.isActive()) return;
+
 		int f = JOGLKeyboard.isPressed(env.key_forward)?M_F:0;
 		int b = JOGLKeyboard.isPressed(env.key_backward)?M_B:0;
 		int l = JOGLKeyboard.isPressed(env.key_left)?M_L:0;
@@ -1244,7 +1287,8 @@ public class Map3D implements GLEventListener, WindowListener {
 			turn_case &= ~BLOCK_LR;
 
 		Point mousePos = glcanvas.getMousePosition();
-		Point systemMousePos = MouseInfo.getPointerInfo().getLocation();
+		PointerInfo pi = MouseInfo.getPointerInfo();
+		Point systemMousePos = pi != null ? pi.getLocation() : null;
 
 		boolean running = JOGLKeyboard.isPressed(env.key_runmod);
 		double mov_scale = (double)delta / 1000.0;
@@ -1281,7 +1325,9 @@ public class Map3D implements GLEventListener, WindowListener {
 					if (env.cam_rot[VecMath.IDX_X] > 180.0)
 						env.cam_rot[VecMath.IDX_X] = 180.0;
 
-					robot.mouseMove(systemMousePos.x - delta_x, systemMousePos.y - delta_y);
+					if(systemMousePos != null) {
+						robot.mouseMove(systemMousePos.x - delta_x, systemMousePos.y - delta_y);
+					}
 				}
 			}
 		}
@@ -1473,7 +1519,7 @@ public class Map3D implements GLEventListener, WindowListener {
 			}
 		}
 	}
-	
+
 	private static final int DIR_N = 0;
 	private static final int DIR_NW = 1;
 	private static final int DIR_W = 2;
@@ -3567,7 +3613,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		
 		handle_environment(tdelta);
 		handle_movement(tdelta);
-		
+
 		if(env.frame_time == -1)
 		{
 			env.frame_time = curTime;
@@ -4306,7 +4352,7 @@ public class Map3D implements GLEventListener, WindowListener {
 			glu.gluOrtho2D(0.0, 1.0, 1.0, 0.0);
 
 			gl.glEnable(GL.GL_BLEND);
-			gl.glBlendFunc(GL.GL_ONE, GL.GL_ONE);
+			gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
 			gl.glColor4d(1.0, 1.0, 1.0, 1.0);
 
 			gl.glEnable(GL.GL_TEXTURE_2D);
@@ -4407,11 +4453,92 @@ public class Map3D implements GLEventListener, WindowListener {
 			tr.endRendering();
 		}
 
+		if(console != null && console_open) {
+			String line = console.currentLine();
+			int cindex = console.cursorIndex();
+			float cursorStart = 10.0f + tr.getCharWidth('>') + 1.0f;
+
+			if(cindex > 0) {
+				for(int i=0; i<cindex; i++) {
+					cursorStart += tr.getCharWidth(line.charAt(i));
+				}
+			}
+
+			int line_height = 20;
+			int console_height = 8 * line_height;
+
+			final int attribBits =
+					GL2.GL_ENABLE_BIT | GL2.GL_TEXTURE_BIT | GL.GL_COLOR_BUFFER_BIT |
+							GL.GL_DEPTH_BUFFER_BIT | GL2.GL_TRANSFORM_BIT;
+			gl.glPushAttrib(attribBits);
+			gl.glDisable(GLLightingFunc.GL_LIGHTING);
+			gl.glDisable(GL.GL_DEPTH_TEST);
+			gl.glDisable(GL.GL_CULL_FACE);
+			gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
+			gl.glPushMatrix();
+			gl.glLoadIdentity();
+			glu.gluOrtho2D(0, surfaceWidth, 0, surfaceHeight);
+			gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
+			gl.glPushMatrix();
+			gl.glLoadIdentity();
+			gl.glMatrixMode(GL.GL_TEXTURE);
+			gl.glPushMatrix();
+			gl.glLoadIdentity();
+
+			gl.glActiveTexture(GL.GL_TEXTURE0);
+			gl.glDisable(GL.GL_TEXTURE_2D);
+			gl.glEnable(GL.GL_BLEND);
+			gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+
+			// console backdrop
+			gl.glColor4d(0.0, 0.0, 0.0, 0.6);
+			gl.glBegin(GL2.GL_QUADS);
+			gl.glVertex3d(0.0, surfaceHeight, 1.0);
+			gl.glVertex3d(surfaceWidth, surfaceHeight, 1.0);
+			gl.glVertex3d(surfaceWidth, surfaceHeight - (console_height + line_height + 5), 1.0);
+			gl.glVertex3d(0, surfaceHeight - (console_height + line_height + 5), 1.0);
+			gl.glEnd();
+
+			// cursor
+			gl.glColor3d(1.0, 1.0, 1.0);
+			gl.glBegin(GL2.GL_LINES);
+			gl.glVertex3f(cursorStart, surfaceHeight - (console_height + line_height + 4), 1.0f);
+			gl.glVertex3f(cursorStart, surfaceHeight - (console_height + 6), 1.0f);
+			gl.glEnd();
+
+			gl.glFlush();
+
+			gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
+			gl.glPopMatrix();
+			gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
+			gl.glPopMatrix();
+			gl.glMatrixMode(GL.GL_TEXTURE);
+			gl.glPopMatrix();
+			gl.glPopAttrib();
+
+			// console lines
+			tr.beginRendering(drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
+
+			tr.setColor(Color.WHITE);
+
+			tr.draw(String.format(">%s", line), 10, surfaceHeight - (console_height + line_height));
+
+			int logEntry = console.currentLogEntry();
+			int line_y = console_height;
+			while(logEntry >= 0 && (line_y > -line_height)) {
+				String logLine = console.getLogEntry(logEntry--);
+				tr.draw(String.format("%s", logLine), 10, surfaceHeight - line_y);
+				line_y -= line_height;
+			}
+
+			tr.endRendering();
+		}
+
 		if(useVertexArrays)
 		{
 			gl.glEnableClientState(GL2.GL_COLOR_ARRAY);
 		}
-		
+
 		env.frames++;
 		
 		glcanvas.repaint();
@@ -4886,6 +5013,9 @@ public class Map3D implements GLEventListener, WindowListener {
 		double aspect = (double)width / (double)height;
 		env.aspect = aspect;
 		GL2 gl = drawable.getGL().getGL2();
+		this.surfaceHeight = height;
+		this.surfaceWidth = width;
+		gl.glViewport(0,0, width, height);
 
 		Rectangle2D bounds = glcanvas.getBounds();
 		System.out.format("Reshape Frame %f,%f,%fx%f GL %dx%d\n", bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(), width, height);
@@ -5697,8 +5827,8 @@ public class Map3D implements GLEventListener, WindowListener {
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
 		System.out.println("Disposing...");
-		JOGLKeyboard.removeKeyReleaseListener(cheatCodes);
 		JOGLKeyboard.removeKeyReleaseListener(toggles);
+		JOGLKeyboard.removeKeyReleaseListener(console);
 		JOGLKeyboard.dispose();
 		destroyMap(drawable);
 	}

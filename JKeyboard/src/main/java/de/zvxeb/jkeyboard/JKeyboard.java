@@ -231,23 +231,23 @@ public class JKeyboard {
 				case KeyEvent.KEY_PRESSED:
 					keystate[keycode] = true;
 					if(perObjectPress!=null) {
-						perObjectPress.keyPressed(keycode);
+						perObjectPress.keyPressed(keycode, ((KeyEvent) event).getKeyChar());
 					}
 					else {
 						tmpPressListeners.addAll(pressListeners);
 						for(KeyPressListener kpl : tmpPressListeners)
-							kpl.keyPressed(keycode);
+							kpl.keyPressed(keycode, ((KeyEvent) event).getKeyChar());
 						tmpPressListeners.clear();
 					}
 					break;
 				case KeyEvent.KEY_RELEASED:
 					keystate[keycode] = false;
 					if(perObjectRelease!=null) {
-						perObjectRelease.keyReleased(keycode);
+						perObjectRelease.keyReleased(keycode, ((KeyEvent) event).getKeyChar());
 					} else {
 						tmpReleaseListeners.addAll(releaseListeners);
 						for(KeyReleaseListener krl : tmpReleaseListeners)
-							krl.keyReleased(keycode);
+							krl.keyReleased(keycode, ((KeyEvent) event).getKeyChar());
 						tmpReleaseListeners.clear();
 					}
 					break;

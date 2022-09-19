@@ -19,5 +19,5 @@
 package de.zvxeb.jkeyboard;
 
 public interface KeyPressListener {
-	public void keyPressed(int keyid);
+	void keyPressed(int keyid, char keychar);
 }

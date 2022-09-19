@@ -19,5 +19,5 @@
 package de.zvxeb.jkeyboard;
 
 public interface KeyReleaseListener {
-	public void keyReleased(int keyid);
+	void keyReleased(int keyid, char keychar);
 }

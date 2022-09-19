@@ -22,23 +22,16 @@ import java.text.Collator;
 import java.util.Map;
 import java.util.TreeMap;
 
-import de.zvxeb.jkeyboard.KeyReleaseListener;
-
-class Cheats implements KeyReleaseListener
+class Cheats
 {
-	private long timeout;
-	private long lastKeyRelease;
-	private StringBuilder currentSequence;
 
 	private Map<String, Boolean> cheats;
 	
 	public Cheats()
 	{
-		timeout = 1000;
 		Collator c = Collator.getInstance();
 		c.setStrength(Collator.PRIMARY);
-		cheats = new TreeMap<String, Boolean>(c);
-		currentSequence = new StringBuilder();
+		cheats = new TreeMap<>(c);
 	}
 	
 	public boolean activeCheat(String cheatName)
@@ -62,33 +55,4 @@ class Cheats implements KeyReleaseListener
 	{
 		setCheat(cheatName, false);
 	}
-
-	@Override
-	public void keyReleased(int keyid) {
-		long curTime = System.currentTimeMillis();
-		
-		if( (curTime - lastKeyRelease) > timeout )
-		{
-			currentSequence.setLength(0);
-		}
-		
-		lastKeyRelease = curTime;
-		
-		char c = (char)keyid;
-		
-		if(Character.isLetterOrDigit(c)) {
-			currentSequence.append(c);
-		} else {
-			currentSequence.setLength(0);
-		}
-	
-		String curString = currentSequence.toString();
-		
-		if(cheats.containsKey(curString))
-		{
-			cheats.put(curString, Boolean.valueOf(true));
-			currentSequence.setLength(0);
-		}
-	}
-	
 }

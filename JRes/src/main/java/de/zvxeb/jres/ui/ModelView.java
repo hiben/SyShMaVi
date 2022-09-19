@@ -486,7 +486,7 @@ public class ModelView extends JFrame implements GLEventListener, KeyPressListen
 	}
 
 	@Override
-	public void keyPressed(int keyid) {
+	public void keyPressed(int keyid, char keychar) {
 		if(keyid==KeyEvent.VK_F1) {
 			onlyNode++;
 		} else if(keyid==KeyEvent.VK_F2) {

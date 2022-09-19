@@ -197,7 +197,7 @@ public class JOGLKeyboard {
 			keystate[keycode] = true;
 			tmpPressListeners.addAll(pressListeners);
 			for(KeyPressListener kpl : tmpPressListeners)
-				kpl.keyPressed(keycode);
+				kpl.keyPressed(keycode, event.getKeyChar());
 			tmpPressListeners.clear();
 		}
 
@@ -208,7 +208,7 @@ public class JOGLKeyboard {
 			keystate[keycode] = false;
 			tmpReleaseListeners.addAll(releaseListeners);
 			for(KeyReleaseListener krl : tmpReleaseListeners)
-				krl.keyReleased(keycode);
+				krl.keyReleased(keycode, event.getKeyChar());
 			tmpReleaseListeners.clear();
 		}
 	}
