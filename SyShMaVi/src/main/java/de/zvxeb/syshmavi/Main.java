@@ -177,9 +177,9 @@ public class Main {
 				}
 				
 				
-				
-				g2d.setColor(Color.WHITE);
-				g2d.drawString("" + mt.getFRot(), xpos + 2, ypos + 32);
+				// show floor rotation
+				//g2d.setColor(Color.WHITE);
+				//g2d.drawString("" + mt.getFRot(), xpos + 2, ypos + 32);
 				
 			}
 		}

@@ -38,6 +38,7 @@ import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import javax.swing.JFrame;
@@ -1158,26 +1159,20 @@ public class Map3D implements GLEventListener, WindowListener {
 				
 				if(keyid == KeyEvent.VK_ESCAPE)
 				{
-					if(mapExit(MapExitEvent.Exit, -1))
-					{
-						cleanStageForNewMap();
-					}
-					else {
-						System.out.println("Listener does not allow exit...");
+					// don't close map if console is open
+					if(console_open) {
+						toggleConsole();
+					} else {
+						if (mapExit(MapExitEvent.Exit, -1)) {
+							cleanStageForNewMap();
+						} else {
+							System.out.println("Listener does not allow exit...");
+						}
 					}
 				}
 
 				if(keyid == env.key_console) {
-					console_open = !console_open;
-					if(console != null) {
-						console.setActive(console_open);
-					}
-					// TODO - better mouse indicator
-					if(console_open) {
-						glcanvas.setCursor(Cursor.getDefaultCursor());
-					} else {
-						glcanvas.setCursor(noCursor);
-					}
+					toggleConsole();
 				}
 			}
 		};
@@ -1224,31 +1219,122 @@ public class Map3D implements GLEventListener, WindowListener {
 		glcanvas.requestFocus();
 	}
 
+	private void toggleConsole() {
+		console_open = !console_open;
+		if(console != null) {
+			console.setActive(console_open);
+		}
+		// TODO - better mouse indicator
+		if(console_open) {
+			glcanvas.setCursor(Cursor.getDefaultCursor());
+		} else {
+			glcanvas.setCursor(noCursor);
+		}
+	}
+
 	private String [] cheatToggles = {
 			cheatFly, cheatHide, cheatLighting, cheatNormals, cheatOnlyPick
 	};
 
-	private Consumer<String> commandConsumer = new Consumer<String>() {
+
+	private final BiFunction<String, String, Boolean> cmdShow = (command, parameters) -> {
+		if(parameters.toLowerCase().startsWith("map")) {
+			console.addToLog("Generating map view...");
+			Main.showMap(rm, palette, map);
+			return true;
+		}
+		if(parameters.toLowerCase().startsWith("tex")) {
+			console.addToLog("Generating texture view...");
+			Main.showTextures(rm, palette, map);
+			return true;
+		}
+		console.addToLog("Unknown show parameter: '" + parameters + "'");
+		return true;
+	};
+
+	private final BiFunction<String, String, Boolean> cmdExit = (command, parameters) -> {
+		if (mapExit(MapExitEvent.Exit, -1)) {
+			console.addToLog("Exiting...");
+			cleanStageForNewMap();
+			return true;
+		} else {
+			console.addToLog("Not allowed to exit...");
+		}
+		return true;
+	};
+
+	private final BiFunction<String, String, Boolean> cmdToggles = (command, parameters) -> {
+		boolean noPrefix = false;
+		if(command.startsWith("no")) {
+			noPrefix = true;
+			command = command.substring(2);
+		}
+
+		for(int i=0; i<cheatToggles.length; i++) {
+			if(cheatToggles[i].equals(command)) {
+				cheatCodes.setCheat(command, !noPrefix);
+				cheatCodes.setCheat("no"+command, noPrefix);
+				console.addToLog(String.format("%s: %s", command, noPrefix ? "off" : "on"));
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	private class MapBuilder<K, V> {
+		private Map map = new HashMap<K, V>();
+
+		public MapBuilder<K, V> add(K k, V v) {
+			map.put(k, v);
+			return this;
+		}
+
+		public Map<K, V> build() {
+			return new HashMap(map);
+		}
+	}
+
+	private final Map<String, BiFunction<String, String, Boolean>> commands =
+		new MapBuilder<String, BiFunction<String, String, Boolean>>()
+			.add("show", cmdShow)
+			.add("exit", cmdExit)
+			.add(cheatFly, cmdToggles)
+			.add(cheatNoFly, cmdToggles)
+			.add(cheatHide, cmdToggles)
+			.add(cheatNoHide, cmdToggles)
+			.add(cheatLighting, cmdToggles)
+			.add(cheatNoLighting, cmdToggles)
+			.add(cheatNormals, cmdToggles)
+			.add(cheatNoNormals, cmdToggles)
+			.add(cheatOnlyPick, cmdToggles)
+			.add(cheatNotOnlyPick, cmdToggles)
+			.build();
+
+	private Consumer<String> commandConsumer = new Consumer<>() {
 		@Override
 		public void accept(String s) {
 			if(s==null) return;
 			s = s.trim();
 			if(s.length()==0) return;
 
-			boolean noPrefix = false;
-			if(s.startsWith("no")) {
-				noPrefix = true;
-				s = s.substring(2);
-			}
+			final String line = s;
 
-			for(int i=0; i<cheatToggles.length; i++) {
-				if(cheatToggles[i].equals(s)) {
-					cheatCodes.setCheat(s, !noPrefix);
-					cheatCodes.setCheat("no"+s, noPrefix);
-					console.addToLog(String.format("%s: %s", s, noPrefix ? "off" : "on"));
-					break;
+			int commandSep = line.indexOf(' ');
+			if(commandSep == -1) {
+				commandSep = line.length();
+			}
+			String command = line.substring(0, commandSep);
+			String parameters = commandSep == line.length() ? "" : line.substring(commandSep+1).trim();
+
+			BiFunction<String, String, Boolean> commandFunction = commands.get(command);
+			if(commandFunction!=null) {
+				if(commandFunction.apply(command, parameters)) {
+					return;
 				}
 			}
+
+			console.addToLog(String.format("Unknown command: %s", line));
 		}
 	};
 	
