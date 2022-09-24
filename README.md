@@ -21,6 +21,19 @@ Changes for release:
 ## Changelog
 Keeping track of changes after releasing on github.
 
+- **24.09.2022**
+  - Added a simple console / replaced 'cheats' with console commands
+
+    '^' key (dead-circumflex) will open a simple console where you can type
+    commands. Key needs to be adjusted for other keyboard layouts (todo)
+
+    Debug commands (see below) are now entered via the console.
+
+    Open console disables mouse look.
+
+  - The internal key handling is switched back to AWT (from NEWT) since this 
+    better integrates with Java components.
+
 - **07.09.2022**
 
   - Initial mouse-look
