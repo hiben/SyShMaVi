@@ -308,26 +308,27 @@ public class Map3D implements GLEventListener, WindowListener {
 	private int [] [] vis_info;
 	
 	private int old_tile_x = -1, old_tile_y = -1, old_cdir = -1;
-	
-	private static final String cheatFly = "fly";
-	private static final String cheatNoFly = "nofly";
-	private static final String cheatHide = "hide";
-	private static final String cheatNoHide = "nohide";
-	private static final String cheatNormals = "normals";
-	private static final String cheatNoNormals = "nonormals";
-	private static final String cheatNoLighting = "nolight";
-	private static final String cheatLighting = "light";
-	private static final String cheatOnlyPick = "pick";
-	private static final String cheatNotOnlyPick = "nopick";
+
+	private static final String settingPrefixNo = "no";
+	private static final String exitCommand = "exit";
+	private static final String showCommand = "show";
+	private static final String flyModeSetting = "fly";
+	private static final String showInfoSetting = "info";
+	private static final String lightingSetting = "light";
+	private static final String pickModeSetting = "pick";
 
 	private static String [] directions = 
 	{
 		"N", "NE", "E", "SE", "S", "SW", "W", "NW"
 	};
 	
-	private Cheats cheatCodes;
 	private KeyReleaseListener toggles;
 	private Console console;
+
+	private boolean flyMode = false;
+	private boolean showInfo = false;
+	private boolean lighting = true;
+	private boolean pickMode = false;
 
 	private int surfaceWidth = 0;
 	private int surfaceHeight = 0;
@@ -1111,18 +1112,6 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	public void setup()
 	{
-		cheatCodes = new Cheats();
-		cheatCodes.addCheat(cheatFly);
-		cheatCodes.addCheat(cheatNoFly);
-		cheatCodes.addCheat(cheatHide);
-		cheatCodes.addCheat(cheatNoHide);
-		cheatCodes.addCheat(cheatNormals);
-		cheatCodes.addCheat(cheatNoNormals);
-		cheatCodes.addCheat(cheatNoLighting);
-		cheatCodes.addCheat(cheatLighting);
-		cheatCodes.addCheat(cheatOnlyPick);
-		cheatCodes.addCheat(cheatNotOnlyPick);
-		
 		toggles = new KeyReleaseListener()
 		{
 			@Override
@@ -1232,11 +1221,6 @@ public class Map3D implements GLEventListener, WindowListener {
 		}
 	}
 
-	private String [] cheatToggles = {
-			cheatFly, cheatHide, cheatLighting, cheatNormals, cheatOnlyPick
-	};
-
-
 	private final BiFunction<String, String, Boolean> cmdShow = (command, parameters) -> {
 		if(parameters.toLowerCase().startsWith("map")) {
 			console.addToLog("Generating map view...");
@@ -1263,23 +1247,58 @@ public class Map3D implements GLEventListener, WindowListener {
 		return true;
 	};
 
-	private final BiFunction<String, String, Boolean> cmdToggles = (command, parameters) -> {
-		boolean noPrefix = false;
+	private final BiFunction<String, String, Boolean> cmdSettings = (command, parameters) -> {
+		boolean setting = true;
+
 		if(command.startsWith("no")) {
-			noPrefix = true;
 			command = command.substring(2);
+			setting = false;
+		} else {
+			if(parameters!=null && parameters.length()>0) {
+				int idx = parameters.indexOf(' ');
+				if (idx == -1) idx = parameters.length();
+				String s = parameters.substring(0, idx).toLowerCase();
+
+				if(s.equals("on") || s.equals("yes") || s.equals("true") || s.equals("1")) {
+					setting = true;
+				} else {
+					if(s.equals("off") || s.equals("no") || s.equals("false") || s.equals("0")) {
+						setting = false;
+					} else {
+						console.addToLog("Invalid option: " + parameters);
+						return true;
+					}
+				}
+			 }
 		}
 
-		for(int i=0; i<cheatToggles.length; i++) {
-			if(cheatToggles[i].equals(command)) {
-				cheatCodes.setCheat(command, !noPrefix);
-				cheatCodes.setCheat("no"+command, noPrefix);
-				console.addToLog(String.format("%s: %s", command, noPrefix ? "off" : "on"));
-				return true;
-			}
+		boolean processed = false;
+
+		if(flyModeSetting.equalsIgnoreCase(command)) {
+			flyMode = setting;
+			processed = true;
 		}
 
-		return false;
+		if(showInfoSetting.equalsIgnoreCase(command)) {
+			showInfo = setting;
+			processed = true;
+		}
+
+		if(lightingSetting.equalsIgnoreCase(command)) {
+			lighting = setting;
+			processed = true;
+		}
+
+		if(pickModeSetting.equalsIgnoreCase(command)) {
+			pickMode = setting;
+			processed = true;
+		}
+
+		if(processed) {
+			console.addToLog(String.format("%s: %s", command, setting ? "on" : "off"));
+		}
+
+		return processed;
 	};
 
 	private class MapBuilder<K, V> {
@@ -1297,18 +1316,16 @@ public class Map3D implements GLEventListener, WindowListener {
 
 	private final Map<String, BiFunction<String, String, Boolean>> commands =
 		new MapBuilder<String, BiFunction<String, String, Boolean>>()
-			.add("show", cmdShow)
-			.add("exit", cmdExit)
-			.add(cheatFly, cmdToggles)
-			.add(cheatNoFly, cmdToggles)
-			.add(cheatHide, cmdToggles)
-			.add(cheatNoHide, cmdToggles)
-			.add(cheatLighting, cmdToggles)
-			.add(cheatNoLighting, cmdToggles)
-			.add(cheatNormals, cmdToggles)
-			.add(cheatNoNormals, cmdToggles)
-			.add(cheatOnlyPick, cmdToggles)
-			.add(cheatNotOnlyPick, cmdToggles)
+			.add(showCommand, cmdShow)
+			.add(exitCommand, cmdExit)
+			.add(flyModeSetting, cmdSettings)
+			.add(settingPrefixNo + flyModeSetting, cmdSettings)
+			.add(showInfoSetting, cmdSettings)
+			.add(settingPrefixNo + showInfoSetting, cmdSettings)
+			.add(lightingSetting, cmdSettings)
+			.add(settingPrefixNo + lightingSetting, cmdSettings)
+			.add(pickModeSetting, cmdSettings)
+			.add(settingPrefixNo + pickModeSetting, cmdSettings)
 			.build();
 
 	private Consumer<String> commandConsumer = new Consumer<>() {
@@ -2900,7 +2917,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		
 		}
 		
-		if(!cheatCodes.activeCheat(cheatOnlyPick))
+		if(!pickMode)
 			gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 	}
 	
@@ -3726,7 +3743,7 @@ public class Map3D implements GLEventListener, WindowListener {
 
 		MapTile cam_mt = map.getTile(cam_tile_x, (map.getVertSize() - 1) - cam_tile_y);
 
-		if(cam_mt!=null && cam_mt.getType()!=MapTile.Type.Solid && !cheatCodes.activeCheat(cheatFly))
+		if(cam_mt!=null && cam_mt.getType()!=MapTile.Type.Solid && !flyMode)
 		{
 			double floorh = cam_mt.getFloorAt(cam_tile_x_d  - cam_tile_x, cam_tile_y_d  - cam_tile_y);
 			env.cam_pos[VecMath.IDX_Y] = floorh * mapToWorldSpace + env.eye_height;
@@ -3799,7 +3816,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		
 		boolean do_sprite_lightning = true;
 		
-		if(cheatCodes.activeCheat(cheatNoLighting))
+		if(!lighting)
 		{
 			q_dark = quad_full_bright;
 			t_dark = tri_full_bright;
@@ -3809,12 +3826,12 @@ public class Map3D implements GLEventListener, WindowListener {
 		}
 
 		// check picked wall (if picked or just draw the walls in pick-colors)
-		if(!map.isCyberspace() && pickPoint!=null || cheatCodes.activeCheat(cheatOnlyPick)) {
+		if(!map.isCyberspace() && (pickPoint!=null || pickMode)) {
 			processPickQuery(drawable);
 		}
 
 		// Draw normal surfaces (skip if pick-debugging...)
-		if(!cheatCodes.activeCheat(cheatOnlyPick)) {
+		if(!pickMode) {
 			if(map.isCyberspace()) {
 				drawTilePolygonsCyber(drawable, q_dark, t_dark, q_cb, t_cb);
 			} else {
@@ -3871,7 +3888,7 @@ public class Map3D implements GLEventListener, WindowListener {
 			orderedSprites.offer(view_dist, Integer.valueOf(i));
 		}
 
-		if(cheatCodes.activeCheat(cheatNoHide)) {
+		if(showInfo) {
 			// Draw lines as base
 			gl.glBegin(GL.GL_LINES);
 
@@ -3981,7 +3998,7 @@ public class Map3D implements GLEventListener, WindowListener {
 						
 						double darkness = 1.0 - clamp(darkness_at(vx, vz, vy));
 						
-						if(cheatCodes.activeCheat(cheatNoLighting))
+						if(!lighting)
 							darkness = 1.0;
 						
 						gl.glColor3d(darkness, darkness, darkness);
@@ -4037,7 +4054,7 @@ public class Map3D implements GLEventListener, WindowListener {
 
 							double darkness = 1.0 - clamp(darkness_at(vx, vz, vy));
 
-							if(cheatCodes.activeCheat(cheatNoLighting))
+							if(!lighting)
 								darkness = 1.0;
 
 							gl.glColor3d(darkness, darkness, darkness);
@@ -4132,11 +4149,11 @@ public class Map3D implements GLEventListener, WindowListener {
 					if(topBottomTexture != null && sideTexture != null) {
 						gl.glEnable(GL.GL_TEXTURE_2D);
 						
-						double [] crateDarkness = cheatCodes.activeCheat(cheatNoLighting) ? null : crateDarknessMap.get(i);
+						double [] crateDarkness = lighting ?crateDarknessMap.get(i) : null;
 						
 						if(crateDarkness == null ) {
 							crateDarkness = tmpCrateDarkness;
-							Arrays.fill(crateDarkness, cheatCodes.activeCheat(cheatNoLighting) ? 1.0 : object_darkness[i]);
+							Arrays.fill(crateDarkness, lighting ? object_darkness[i] : 1.0);
 						}
 						
 						double coords_x = object_vertex[i*6 + 0];					
@@ -4197,11 +4214,11 @@ public class Map3D implements GLEventListener, WindowListener {
 					if(topBottomTexture != null && sideTexture != null) {
 						gl.glEnable(GL.GL_TEXTURE_2D);
 						
-						double [] crateDarkness = cheatCodes.activeCheat(cheatNoLighting) ? null : crateDarknessMap.get(i);
+						double [] crateDarkness = lighting ? crateDarknessMap.get(i) : null;
 						
 						if(crateDarkness == null ) {
 							crateDarkness = tmpCrateDarkness;
-							Arrays.fill(crateDarkness, cheatCodes.activeCheat(cheatNoLighting) ? 1.0 : object_darkness[i]);
+							Arrays.fill(crateDarkness, lighting ? object_darkness[i] : 1.0);
 						}
 
 						double coords_x = object_vertex[i*6 + 0];					
@@ -4301,7 +4318,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		// now produce the billboards
 		tr.begin3DRendering();
 		//for(int i : orderedSprites)
-		while(cheatCodes.activeCheat(cheatNoHide) && !orderedSprites.isEmpty())
+		while(showInfo && !orderedSprites.isEmpty())
 		{
 			ZOrderQueue<Integer>.ZInfo zi = orderedSprites.pollZ();
 			int i = zi.getElement();
@@ -4466,7 +4483,7 @@ public class Map3D implements GLEventListener, WindowListener {
 			gl.glDisable(GL.GL_BLEND);
 		}
 
-		if(cheatCodes.activeCheat(cheatNoHide)) {
+		if(showInfo) {
 			int dir_index = ((int) ((env.cam_rot[VecMath.IDX_Y] + (360.0 + 22.5)) / 45.0)) % 8;
 
 			tr.beginRendering(drawable.getSurfaceWidth(), drawable.getSurfaceHeight());
@@ -4486,7 +4503,7 @@ public class Map3D implements GLEventListener, WindowListener {
 											, (cam_mt != null) ? cam_mt.getType().toString() : "<no tile>"
 											, env.fps
 											, env.fov_h
-											, cheatCodes.activeCheat(cheatFly) ? " FlyMode" : ""
+											, flyMode ? " FlyMode" : ""
 									)
 							, 10
 							, drawable.getSurfaceHeight() - 20
@@ -4628,36 +4645,6 @@ public class Map3D implements GLEventListener, WindowListener {
 		env.frames++;
 		
 		glcanvas.repaint();
-		
-		if(cheatCodes.activeCheat(cheatNoFly))
-		{
-			cheatCodes.setCheat(cheatFly, false);
-			cheatCodes.setCheat(cheatNoFly, false);
-		}
-		
-		if(cheatCodes.activeCheat(cheatHide))
-		{
-			cheatCodes.setCheat(cheatHide, false);
-			cheatCodes.setCheat(cheatNoHide, false);
-		}
-
-		if(cheatCodes.activeCheat(cheatNoNormals))
-		{
-			cheatCodes.setCheat(cheatNormals, false);
-			cheatCodes.setCheat(cheatNoNormals, false);
-		}
-		
-		if(cheatCodes.activeCheat(cheatLighting))
-		{
-			cheatCodes.setCheat(cheatNoLighting, false);
-			cheatCodes.setCheat(cheatLighting, false);
-		}
-		
-		if(cheatCodes.activeCheat(cheatNotOnlyPick))
-		{
-			cheatCodes.setCheat(cheatOnlyPick, false);
-			cheatCodes.setCheat(cheatNotOnlyPick, false);
-		}
 	}
 	
 	// TODO fetch other aux-pals for cyber-items
@@ -4751,7 +4738,7 @@ public class Map3D implements GLEventListener, WindowListener {
 					double vx = vec.getX() * model_scale_x;
 					double vy = vec.getY() * model_scale_y;
 					double vz = vec.getZ() * model_scale_z;
-					if(!glowing_color && !cheatCodes.activeCheat(cheatNoLighting)) {
+					if(!glowing_color && lighting) {
 						double darkness = 1.0 - clamp(darkness_at(dox + (vx * mapToWorldSpace), doy + (vy * mapToWorldSpace), doz + (vz * mapToWorldSpace)));
 						gl.glColor3d(cr*darkness, cg*darkness, cb*darkness);
 					}
