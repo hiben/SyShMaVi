@@ -949,13 +949,9 @@ public class JResBrowser {
 				if(!askOverwrite(df.getName()))
 					return;
 			
-			try {
-				FileOutputStream fos = new FileOutputStream(df);
-				
+			try(FileOutputStream fos = new FileOutputStream(df)) {
 				byte [] data = noUnpack?lastDirEntry.getFileData():lastDirEntry.getData();
-				
 				fos.write(data);
-				
 			} catch (FileNotFoundException e) {
 				errorMessage("Unable to find file. System said: " + e.getMessage());
 			} catch (IOException e) {
@@ -979,13 +975,9 @@ public class JResBrowser {
 				if(!askOverwrite(df.getName()))
 					return;
 			
-			try {
-				FileOutputStream fos = new FileOutputStream(df);
-				
+			try(FileOutputStream fos = new FileOutputStream(df)) {
 				byte [] data = lastSubChunk.getData();
-				
 				fos.write(data);
-				
 			} catch (FileNotFoundException e) {
 				errorMessage("Unable to find file. System said: " + e.getMessage());
 			} catch (IOException e) {
@@ -1010,8 +1002,7 @@ public class JResBrowser {
 				if(!askOverwrite(df.getName()))
 					return;
 			
-			try {
-				FileOutputStream fos = new FileOutputStream(df);
+			try(FileOutputStream fos = new FileOutputStream(df)) {
 
 				if(gimp) {
 					Util.writeGIMPPalette(fos, "Chunk#"+lastPaletteDirEntry.getChunkId(), current_palette);
@@ -1057,8 +1048,9 @@ public class JResBrowser {
 				}
 				else
 				{
-					FileOutputStream fos = new FileOutputStream(df);
-					baos.writeTo(fos);
+					try(FileOutputStream fos = new FileOutputStream(df)) {
+						baos.writeTo(fos);
+					}
 				}
 			} catch (FileNotFoundException e) {
 				errorMessage("Unable to find file. System said: " + e.getMessage());
@@ -1540,8 +1532,9 @@ public class JResBrowser {
 				}
 				else
 				{
-					FileOutputStream fos = new FileOutputStream(df);
-					baos.writeTo(fos);
+					try(FileOutputStream fos = new FileOutputStream(df)) {
+						baos.writeTo(fos);
+					}
 				}
 			} catch (FileNotFoundException e) {
 				errorMessage("Unable to find file. System said: " + e.getMessage());
