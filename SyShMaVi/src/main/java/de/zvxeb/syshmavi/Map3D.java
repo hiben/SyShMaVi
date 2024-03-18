@@ -1081,7 +1081,7 @@ public class Map3D implements GLEventListener, WindowListener {
 				
 				if(mote.getObjectTypeId() == SSObject.OTID_GRAFITTI || mote.getObjectTypeId() == SSObject.OTID_DECAL) {
 					short chunk = (short) (mote.getObjectTypeId() == SSObject.OTID_GRAFITTI ? SSLogic.graffitiChunk : SSLogic.decalChunk);
-					int subChunk = mote.getState();
+					int subChunk = mote.getFrame();
 					byte [] textureData = rm.getData(chunk, subChunk);
 					
 					if(textureData != null) {

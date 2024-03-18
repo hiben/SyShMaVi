@@ -267,8 +267,8 @@ public class SSObject {
 		private byte objectSubClass;
 		private int objectClassIndex;
 		private int crossRefIndex;
-		private int prevLink;
 		private int nextLink;
+		private int prevLink;
 		private int xCoord;
 		private int yCoord;
 		private int zCoord;
@@ -279,7 +279,11 @@ public class SSObject {
 		private byte objectType;
 		private short hitPoints;
 		private byte state;
-		
+
+		private byte frame;
+		private byte pad1;
+		private byte pad2;
+
 		private int objectId;
 		
 		private int objectTypeId;
@@ -313,11 +317,11 @@ public class SSObject {
 			crossRefIndex = tmp;
 
 			tmp = ((int)bb.getShort())&0xFFFF;
-			prevLink = tmp;
+			nextLink = tmp;
 
 			tmp = ((int)bb.getShort())&0xFFFF;
-			nextLink = tmp;
-			
+			prevLink = tmp;
+
 			tmp = ((int)bb.getShort())&0xFFFF;
 			xCoord = tmp;
 			
@@ -348,9 +352,9 @@ public class SSObject {
 			tmp = ((int)bb.get())&0xFF;
 			state = (byte)tmp;
 
-			bb.get();
-			bb.get();
-			bb.get();
+			frame = bb.get();
+			pad1 = bb.get();
+			pad2 = bb.get();
 			
 			// class index is used elsewhere, so this only looks wierd...
 			objectId = object_index[objectClass][objectSubClass] + objectType;
@@ -405,6 +409,10 @@ public class SSObject {
 
 		public byte getState() {
 			return state;
+		}
+
+		public byte getFrame() {
+			return frame;
 		}
 
 		public int getXAngle() {
