@@ -25,6 +25,7 @@ Changes for release:
 Keeping track of changes after releasing on github.
 - **20.03.2024**
   - Code cleanup / Refactoring
+  - Added simple 'star-field'
   - Updated readme :-)
 
 - **24.09.2022**

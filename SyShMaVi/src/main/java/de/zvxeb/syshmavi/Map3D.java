@@ -125,7 +125,8 @@ public class Map3D implements GLEventListener, WindowListener {
 
 	private Cursor noCursor;
 	private Robot robot;
-	
+
+	double [] stars;
 	short [] texids;
 	private Texture [] textures;
 	private Texture [] glow_tex;
@@ -570,6 +571,23 @@ public class Map3D implements GLEventListener, WindowListener {
 		
 		return does_glow_at_all;
 	}
+
+	private void createStars() {
+		int starCount = 200;
+		Random rnd = new Random(0L);
+		stars = new double[starCount*3];
+
+		for(int i=0; i<starCount; i++) {
+			double [] starVec = { 1.0, 0.0, 0.0 };
+			VecMath.rotateY(starVec, rnd.nextDouble() * 2.0 * Math.PI, starVec);
+			VecMath.rotateZ(starVec, rnd.nextDouble() * 2.0 * Math.PI, starVec);
+			VecMath.rotateX(starVec, rnd.nextDouble() * 2.0 * Math.PI, starVec);
+			VecMath.vecMul(starVec, 10, starVec);
+			stars[i*3] = starVec[0];
+			stars[i*3+1] = starVec[1];
+			stars[i*3+2] = starVec[2];
+		}
+	}
 	
 	private void fetchTextures(GL2 gl)
 	{
@@ -593,7 +611,7 @@ public class Map3D implements GLEventListener, WindowListener {
 			{
 				TextureID tid = new TextureID(s, SSTexture.TextureSize.TS128);
 				ResBitmap rb = SSTexture.getTexture(rm, tid);
-				BufferedImage bi = rb.getImage(palette);
+				BufferedImage bi = rb.getARGBImage(palette);
 
 				textures[ti] = AWTTextureIO.newTexture(gl.getGLProfile(), bi, true);
 				textures[ti].setTexParameteri(gl, GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT);
@@ -3796,11 +3814,25 @@ public class Map3D implements GLEventListener, WindowListener {
 		gl.glLoadIdentity();
 
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
-		
+
 		gl.glRotated(env.cam_rot[VecMath.IDX_X], 1.0, 0.0, 0.0);
 		gl.glRotated(env.cam_rot[VecMath.IDX_Y], 0.0, 1.0, 0.0);
 		gl.glRotated(env.cam_rot[VecMath.IDX_Z], 0.0, 0.0, 1.0);
-		
+
+		gl.glDisable(GL.GL_TEXTURE_2D);
+		gl.glDisable(GL.GL_DEPTH_TEST);
+		gl.glDisable(GL.GL_BLEND);
+		gl.glPointSize(2.0f);
+		gl.glDepthMask(false);
+		gl.glBegin(GL.GL_POINTS);
+		gl.glColor3f(0.9f, 0.9f, 1.0f);
+		for(int i=0; i<stars.length; i+=3) {
+			gl.glVertex3d(stars[i], stars[i+1], stars[i+2]);
+		}
+		gl.glEnd();
+		gl.glDepthMask(true);
+		gl.glEnable(GL.GL_DEPTH_TEST);
+
 		gl.glTranslated(-env.cam_pos[VecMath.IDX_X], -env.cam_pos[VecMath.IDX_Y], -env.cam_pos[VecMath.IDX_Z]);
 
 		gl.glDisable(GL.GL_BLEND);
@@ -4446,7 +4478,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		// we could now restore the rotation matrix but we are now
 		// done producing (virtual) world objects...
 
-		
+
 		// Draw vis-map
 		if(show_vismap)
 		{
@@ -4842,6 +4874,8 @@ public class Map3D implements GLEventListener, WindowListener {
 		vis_info = new int [map.getHorzSize() * map.getVertSize()] [];
 
 		mapObjects = map.getMOTEntries();
+
+		createStars();
 
 		fetchTextures(gl);
 		
