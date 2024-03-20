@@ -3819,19 +3819,21 @@ public class Map3D implements GLEventListener, WindowListener {
 		gl.glRotated(env.cam_rot[VecMath.IDX_Y], 0.0, 1.0, 0.0);
 		gl.glRotated(env.cam_rot[VecMath.IDX_Z], 0.0, 0.0, 1.0);
 
-		gl.glDisable(GL.GL_TEXTURE_2D);
-		gl.glDisable(GL.GL_DEPTH_TEST);
-		gl.glDisable(GL.GL_BLEND);
-		gl.glPointSize(2.0f);
-		gl.glDepthMask(false);
-		gl.glBegin(GL.GL_POINTS);
-		gl.glColor3f(0.9f, 0.9f, 1.0f);
-		for(int i=0; i<stars.length; i+=3) {
-			gl.glVertex3d(stars[i], stars[i+1], stars[i+2]);
+		if(!map.isCyberspace()) {
+			gl.glDisable(GL.GL_TEXTURE_2D);
+			gl.glDisable(GL.GL_DEPTH_TEST);
+			gl.glDisable(GL.GL_BLEND);
+			gl.glPointSize(2.0f);
+			gl.glDepthMask(false);
+			gl.glBegin(GL.GL_POINTS);
+			gl.glColor3f(0.9f, 0.9f, 1.0f);
+			for (int i = 0; i < stars.length; i += 3) {
+				gl.glVertex3d(stars[i], stars[i + 1], stars[i + 2]);
+			}
+			gl.glEnd();
+			gl.glDepthMask(true);
+			gl.glEnable(GL.GL_DEPTH_TEST);
 		}
-		gl.glEnd();
-		gl.glDepthMask(true);
-		gl.glEnable(GL.GL_DEPTH_TEST);
 
 		gl.glTranslated(-env.cam_pos[VecMath.IDX_X], -env.cam_pos[VecMath.IDX_Y], -env.cam_pos[VecMath.IDX_Z]);
 
