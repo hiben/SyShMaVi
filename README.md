@@ -4,6 +4,9 @@ This is an *incomplete* project with the goal to view resources and maps from th
 The main part of this code was written in 2008 but never made public. My interest in this was revived a bit in 2021/22 because of the
 soon (?) release of the System Shock remake by *Nightdive* (I'm a backer).
 
+*Edit:* The remake was released in the meantime - and I mostly like what was delivered.
+Waiting for patch 1.2 gives me some time to think about this project.
+
 The code is at its core a Java port of TSSHP - The System Shock Hack Project. It is used for reading resources and was the base of the 3d
 rendering code. The 3d rendering part uses JOGL and is therefore quite different.
 
@@ -20,6 +23,9 @@ Changes for release:
 
 ## Changelog
 Keeping track of changes after releasing on github.
+- **20.03.2024**
+  - Code cleanup / Refactoring
+  - Updated readme :-)
 
 - **24.09.2022**
   - Added a simple console / replaced 'cheats' with console commands
