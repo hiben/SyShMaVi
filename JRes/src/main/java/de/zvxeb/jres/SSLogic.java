@@ -274,7 +274,7 @@ public class SSLogic {
 		  ArchiveName
 		, PlayerInformation
 		, Unknown02
-		, Unknwon03
+		, Unknown03
 		, LevelInformation
 		, TileMap
 		, Unknown06
