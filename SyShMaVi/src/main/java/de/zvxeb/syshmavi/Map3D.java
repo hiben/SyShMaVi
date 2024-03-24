@@ -126,7 +126,10 @@ public class Map3D implements GLEventListener, WindowListener {
 	private Cursor noCursor;
 	private Robot robot;
 
-	double [] stars;
+	int starCount = 500;
+	double [] star_vertex;
+	double [] star_color;
+	double starRotation = 0.0;
 	short [] texids;
 	private Texture [] textures;
 	private Texture [] glow_tex;
@@ -260,13 +263,15 @@ public class Map3D implements GLEventListener, WindowListener {
 	double [] tri_dark;
 	double [] tri_full_bright;
 
-	PolygonType [] tri_pt; 
-	
+	PolygonType [] tri_pt;
+
 	int [] tri_tileoffs;
-	
+
 	DoubleBuffer db_vertex_quad, db_texcoord_quad, db_color_quad, db_fb_quad;
 	DoubleBuffer db_vertex_tri, db_texcoord_tri, db_color_tri, db_fb_tri;
+	DoubleBuffer db_vertex_star, db_color_star;
 	IntBuffer ib_index_quad, ib_index_tri;
+	IntBuffer ib_index_star;
 	
 	List<SSObject.MOTEntry> mapObjects;
 	List<SSObject.Fixture> fixtureInfo;
@@ -573,20 +578,26 @@ public class Map3D implements GLEventListener, WindowListener {
 	}
 
 	private void createStars() {
-		int starCount = 200;
 		Random rnd = new Random(0L);
-		stars = new double[starCount*3];
+		star_vertex = new double[starCount*3];
+		star_color = new double[starCount*4];
 
 		for(int i=0; i<starCount; i++) {
 			double [] starVec = { 1.0, 0.0, 0.0 };
 			VecMath.rotateY(starVec, rnd.nextDouble() * 2.0 * Math.PI, starVec);
 			VecMath.rotateZ(starVec, rnd.nextDouble() * 2.0 * Math.PI, starVec);
 			VecMath.rotateX(starVec, rnd.nextDouble() * 2.0 * Math.PI, starVec);
-			VecMath.vecMul(starVec, 10, starVec);
-			stars[i*3] = starVec[0];
-			stars[i*3+1] = starVec[1];
-			stars[i*3+2] = starVec[2];
+			VecMath.vecMul(starVec, 10.0, starVec);
+			star_vertex[i*3] = starVec[0];
+			star_vertex[i*3+1] = starVec[1];
+			star_vertex[i*3+2] = starVec[2];
+			var base = rnd.nextDouble() * 0.25;
+			star_color[i*4] = 0.65 + base;
+			star_color[i*4+1] = 0.65 + base;
+			star_color[i*4+2] = 1.0 - rnd.nextDouble() * 0.1;
+			star_color[i*4+3] = 1.0 - rnd.nextDouble() * 0.75;
 		}
+
 	}
 	
 	private void fetchTextures(GL2 gl)
@@ -1638,6 +1649,12 @@ public class Map3D implements GLEventListener, WindowListener {
 					}
 				}
 			}
+		}
+
+		// one rotation every 10 minutes
+		starRotation += (360.0 / (10 * 60 * 1000)) * delta;
+		if(starRotation >= 360.0) {
+			starRotation -= 360.0;
 		}
 	}
 
@@ -2941,13 +2958,13 @@ public class Map3D implements GLEventListener, WindowListener {
 	
 	private void drawTilePolygonsCyber(GLAutoDrawable drawable, double [] q_dark, double [] t_dark, DoubleBuffer q_cb, DoubleBuffer t_cb) {
 		GL2 gl = drawable.getGL().getGL2();
-		
+
 		gl.glColor4d(1.0, 1.0, 1.0, 1.0);
 		gl.glActiveTexture(GL.GL_TEXTURE1);
 		gl.glDisable(GL.GL_TEXTURE_2D);
 		gl.glActiveTexture(GL.GL_TEXTURE0);
 		gl.glDisable(GL.GL_TEXTURE_2D);
-		
+
 		ib_index_quad.rewind();
 		int visqelements = 0;
 		for(int qi = 0; qi < quads_total; qi++) {
@@ -3714,6 +3731,55 @@ public class Map3D implements GLEventListener, WindowListener {
 		gl.glEnd();
 		gl.glFlush();
 	}
+
+	private void renderStars(GL2 gl) {
+		gl.glPushMatrix();
+		gl.glRotated(starRotation, 0.0, 1.0, 0.0);
+		gl.glDisableClientState(GL2.GL_TEXTURE_COORD_ARRAY);
+		gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+		gl.glEnableClientState(GL2.GL_COLOR_ARRAY);
+
+		gl.glColor4d(1.0, 1.0, 1.0, 1.0);
+		gl.glActiveTexture(GL.GL_TEXTURE1);
+		gl.glDisable(GL.GL_TEXTURE_2D);
+		gl.glClientActiveTexture(GL.GL_TEXTURE1);
+		gl.glDisableClientState(GL2.GL_TEXTURE_COORD_ARRAY);
+		gl.glClientActiveTexture(GL.GL_TEXTURE0);
+		gl.glActiveTexture(GL.GL_TEXTURE0);
+		gl.glDisable(GL.GL_TEXTURE_2D);
+
+		gl.glDisable(GL.GL_DEPTH_TEST);
+		gl.glEnable(GL.GL_BLEND);
+		gl.glPointSize(1.75f);
+		gl.glDepthMask(false);
+		db_vertex_star.rewind();
+		db_color_star.rewind();
+		ib_index_star.rewind();
+
+		gl.glVertexPointer(3, GL2.GL_DOUBLE, 0, db_vertex_star);
+		gl.glIndexPointer(GL2.GL_INT, 0, ib_index_star);
+		gl.glColorPointer(4, GL2.GL_DOUBLE, 0, db_color_star);
+		gl.glDrawElements(GL.GL_POINTS, starCount, GL.GL_UNSIGNED_INT, ib_index_star);
+
+		gl.glDepthMask(true);
+		gl.glEnable(GL.GL_DEPTH_TEST);
+		gl.glPopMatrix();
+
+		// restore client state
+		if(useVertexArrays) {
+			gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
+			gl.glEnableClientState(GL2.GL_TEXTURE_COORD_ARRAY);
+			gl.glEnableClientState(GL2.GL_COLOR_ARRAY);
+
+			if (use_multitex_glow && !map.isCyberspace()) {
+				gl.glActiveTexture(GL.GL_TEXTURE1);
+				gl.glClientActiveTexture(GL.GL_TEXTURE1);
+				gl.glEnableClientState(GL2.GL_TEXTURE_COORD_ARRAY);
+				gl.glClientActiveTexture(GL.GL_TEXTURE0);
+				gl.glActiveTexture(GL.GL_TEXTURE0);
+			}
+		}
+	}
 	
 	@Override
 	public void display(GLAutoDrawable drawable) {
@@ -3820,19 +3886,7 @@ public class Map3D implements GLEventListener, WindowListener {
 		gl.glRotated(env.cam_rot[VecMath.IDX_Z], 0.0, 0.0, 1.0);
 
 		if(!map.isCyberspace()) {
-			gl.glDisable(GL.GL_TEXTURE_2D);
-			gl.glDisable(GL.GL_DEPTH_TEST);
-			gl.glDisable(GL.GL_BLEND);
-			gl.glPointSize(2.0f);
-			gl.glDepthMask(false);
-			gl.glBegin(GL.GL_POINTS);
-			gl.glColor3f(0.9f, 0.9f, 1.0f);
-			for (int i = 0; i < stars.length; i += 3) {
-				gl.glVertex3d(stars[i], stars[i + 1], stars[i + 2]);
-			}
-			gl.glEnd();
-			gl.glDepthMask(true);
-			gl.glEnable(GL.GL_DEPTH_TEST);
+			renderStars(gl);
 		}
 
 		gl.glTranslated(-env.cam_pos[VecMath.IDX_X], -env.cam_pos[VecMath.IDX_Y], -env.cam_pos[VecMath.IDX_Z]);
@@ -4969,6 +5023,14 @@ public class Map3D implements GLEventListener, WindowListener {
 			db_texcoord_tri = Buffers.newDirectDoubleBuffer(tri_tc, 0);
 			db_color_tri = Buffers.newDirectDoubleBuffer(tri_dark, 0);
 			db_fb_tri = Buffers.newDirectDoubleBuffer(tri_full_bright, 0);
+		}
+		db_vertex_star = Buffers.newDirectDoubleBuffer(star_vertex, 0);
+		db_color_star = Buffers.newDirectDoubleBuffer(star_color, 0);
+		ib_index_star = Buffers.newDirectIntBuffer(starCount);
+
+		ib_index_star.rewind();
+		for(int i=0; i<starCount; i++) {
+			ib_index_star.put(i);
 		}
 		
 		ib_index_quad = Buffers.newDirectIntBuffer(map.isCyberspace() ? quads_total * 8 : max_quads_per_tex * 4);
