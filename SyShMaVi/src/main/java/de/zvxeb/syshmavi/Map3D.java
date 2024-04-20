@@ -1651,8 +1651,8 @@ public class Map3D implements GLEventListener, WindowListener {
 			}
 		}
 
-		// one rotation every 10 minutes
-		starRotation += (360.0 / (10 * 60 * 1000)) * delta;
+		// 48 rotations per day = 720° per hour
+		starRotation += (720.0 / (60 * 60 * 1000)) * delta;
 		if(starRotation >= 360.0) {
 			starRotation -= 360.0;
 		}
@@ -3734,7 +3734,7 @@ public class Map3D implements GLEventListener, WindowListener {
 
 	private void renderStars(GL2 gl) {
 		gl.glPushMatrix();
-		gl.glRotated(starRotation, 0.0, 1.0, 0.0);
+		gl.glRotated(-starRotation, 0.0, 1.0, 0.0);
 		gl.glDisableClientState(GL2.GL_TEXTURE_COORD_ARRAY);
 		gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
 		gl.glEnableClientState(GL2.GL_COLOR_ARRAY);
