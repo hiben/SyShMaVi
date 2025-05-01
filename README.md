@@ -23,6 +23,10 @@ Changes for release:
 
 ## Changelog
 Keeping track of changes after releasing on github.
+- **01.05.2025**
+  - Cleaned up Gradle script and .gitignore (fixes issues with working under Linux)
+  - Removed deprecated 'yield' call from the Movie Viewer (Java 14+ support)
+
 - **20.03.2024**
   - Code cleanup / Refactoring
   - Added simple 'star-field'
