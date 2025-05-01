@@ -732,7 +732,7 @@ public class MovieView extends JFrame implements ChangeListener {
 							delta = frameStart - currentTime;
 							
 							if(delta < 0) {
-								System.out.println("smaller delta... " + delta + " type " + frameType(currentFrame));;
+								System.out.println("smaller delta... " + delta + " type " + frameType(currentFrame));
 							}
 							
 						} else {
@@ -744,8 +744,6 @@ public class MovieView extends JFrame implements ChangeListener {
 					
 					infoLabel.setText("Frame #" + videoFrame + " Buffer: " + fc.getBufferSize() + " Mem: " + Runtime.getRuntime().freeMemory());
 				}
-
-				yield();
 			}
 			
 			if(killAudio)
