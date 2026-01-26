@@ -23,6 +23,8 @@ Changes for release:
 
 ## Changelog
 Keeping track of changes after releasing on github.
+- **26.01.2026**
+  - Updated JOGL to version 2.6.0, Gradle to version 9.0.0 to move to Java 21
 - **01.05.2025**
   - Cleaned up Gradle script and .gitignore (fixes issues with working under Linux)
   - Removed deprecated 'yield' call from the Movie Viewer (Java 14+ support)
